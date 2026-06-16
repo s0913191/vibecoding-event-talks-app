@@ -450,6 +450,12 @@ body {
     z-index: 5;
 }
 
+.nav-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
 .feed-title {
     font-size: 1.35rem;
     font-weight: 700;

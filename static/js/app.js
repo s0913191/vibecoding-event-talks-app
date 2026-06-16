@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const elements = {
         refreshBtn: document.getElementById('refresh-btn'),
+        exportCsvBtn: document.getElementById('export-csv-btn'),
         syncText: document.getElementById('sync-text'),
         indicator: document.querySelector('.status-indicator'),
         feedContainer: document.getElementById('release-notes-feed'),
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event Listeners
     elements.refreshBtn.addEventListener('click', fetchReleases);
+    elements.exportCsvBtn.addEventListener('click', exportToCSV);
     
     elements.searchInput.addEventListener('input', (e) => {
         state.filters.search = e.target.value.trim().toLowerCase();
@@ -277,6 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 class="card-title">${item.title}</h3>
                 <div class="card-content">${parsedContentHTML}</div>
                 <div class="card-footer">
+                    <button class="btn btn-secondary copy-action-btn" data-action="copy-card" data-id="${item.id}">
+                        <i data-lucide="copy"></i> Copy Content
+                    </button>
                     <button class="btn btn-secondary tweet-action-btn" data-action="tweet-card" data-id="${item.id}">
                         <i data-lucide="twitter"></i> Tweet Full Release
                     </button>
@@ -339,6 +344,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set up listeners for cards and inline bullet buttons
     function setupCardActionListeners() {
+        // Full Card Copy buttons
+        elements.feedContainer.querySelectorAll('[data-action="copy-card"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const itemId = btn.dataset.id;
+                const item = state.allReleases.find(r => r.id == itemId);
+                if (item) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = item.content;
+                    // Remove inline tweet buttons from copy content so they don't get copied!
+                    tempDiv.querySelectorAll('.inline-tweet-btn').forEach(b => b.remove());
+                    const plainText = tempDiv.innerText.replace(/\s+/g, ' ').trim();
+                    
+                    navigator.clipboard.writeText(plainText)
+                        .then(() => {
+                            showToast('Release content copied to clipboard!', 'success');
+                        })
+                        .catch(() => {
+                            showToast('Failed to copy content', 'error');
+                        });
+                }
+            });
+        });
+
         // Full Card Tweet buttons
         elements.feedContainer.querySelectorAll('[data-action="tweet-card"]').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -670,5 +698,55 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDashboardStats();
         renderReleaseNotes();
         lucide.createIcons();
+    }
+
+    // Export current filtered view to CSV
+    function exportToCSV() {
+        if (state.filteredReleases.length === 0) {
+            showToast('No release notes to export!', 'error');
+            return;
+        }
+
+        // CSV Headers
+        const headers = ['Date', 'Category', 'Title', 'Content', 'Link'];
+        
+        const rows = state.filteredReleases.map(item => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = item.content;
+            tempDiv.querySelectorAll('.inline-tweet-btn').forEach(b => b.remove());
+            const plainContent = tempDiv.innerText.replace(/\s+/g, ' ').trim();
+            
+            return [
+                item.formattedDate,
+                item.category,
+                item.title,
+                plainContent,
+                item.link
+            ];
+        });
+
+        // Convert to CSV string with escaping
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        // Trigger file download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const categoryFilter = state.filters.category;
+        const filename = `bigquery_releases_${categoryFilter}_${timestamp}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast(`Exported ${state.filteredReleases.length} updates to CSV!`, 'success');
     }
 });
