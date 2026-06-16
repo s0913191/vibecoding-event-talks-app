@@ -122,6 +122,17 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.clipboard.writeText(elements.tweetTextarea.value)
             .then(() => {
                 showToast('Copied to clipboard!', 'success');
+                
+                // Momentary inline checkmark feedback
+                const btn = elements.modalCopyBtn;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = `<i data-lucide="check" style="color: var(--color-feature);"></i> Copied!`;
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    lucide.createIcons();
+                }, 1500);
             })
             .catch(() => {
                 showToast('Failed to copy text', 'error');
@@ -359,6 +370,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     navigator.clipboard.writeText(plainText)
                         .then(() => {
                             showToast('Release content copied to clipboard!', 'success');
+                            
+                            // Momentary inline checkmark feedback
+                            const originalHTML = btn.innerHTML;
+                            btn.innerHTML = `<i data-lucide="check" style="color: var(--color-feature);"></i> Copied!`;
+                            lucide.createIcons();
+                            
+                            setTimeout(() => {
+                                btn.innerHTML = originalHTML;
+                                lucide.createIcons();
+                            }, 1500);
                         })
                         .catch(() => {
                             showToast('Failed to copy content', 'error');
